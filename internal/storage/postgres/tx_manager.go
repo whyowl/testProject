@@ -2,6 +2,12 @@ package postgres
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"math/rand"
+	"time"
+
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -21,7 +27,7 @@ func (tm *TxManager) RunSerializable(ctx context.Context, fn func(ctxTx context.
 		IsoLevel:   pgx.Serializable,
 		AccessMode: pgx.ReadWrite,
 	}
-	return tm.beginFunc(ctx, options, fn)
+	return tm.beginWithRetry(ctx, options, fn)
 }
 
 func (tm *TxManager) RunReadUncommitted(ctx context.Context, fn func(ctxTx context.Context) error) error {
@@ -45,6 +51,28 @@ func (tm *TxManager) beginFunc(ctx context.Context, txOptions pgx.TxOptions, fn 
 	}
 
 	return tx.Commit(ctx)
+}
+
+func (tm *TxManager) beginWithRetry(ctx context.Context, txOptions pgx.TxOptions, fn func(ctxTx context.Context) error) error {
+	const maxRetries = 5
+	baseDelay := 10 * time.Millisecond
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		err := tm.beginFunc(ctx, txOptions, fn)
+		if err == nil {
+			return nil
+		}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "40001" || pgErr.Code == "40P01" {
+				jitter := time.Duration(rand.Intn(10)) * time.Millisecond
+				time.Sleep(time.Duration(1<<attempt)*baseDelay + jitter)
+				continue
+			}
+		}
+		return err
+	}
+	return fmt.Errorf("transaction failed after retries")
 }
 
 func (tm *TxManager) GetQueryEngine(ctx context.Context) QueryEngine {
