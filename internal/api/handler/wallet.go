@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"time"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"net/http"
 )
 
 type WalletOperationType string
@@ -25,31 +28,51 @@ type CreateWalletRequest struct {
 }
 
 func (h *RestHandler) TransferFunds(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	defer cancel()
+
 	var req WalletRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
 
 	parsedWalletID, err := uuid.Parse(req.WalletID)
 	if err != nil || parsedWalletID == uuid.Nil {
-		http.Error(w, "invalid walletId parameter", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid walletId parameter")
 		return
 	}
 
 	switch req.OperationType {
 	case Deposit:
-		if err := h.s.DepositFunds(r.Context(), parsedWalletID, int(req.Amount)); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err := h.s.DepositFunds(ctx, parsedWalletID, req.Amount); err != nil {
+			status := http.StatusInternalServerError
+			switch err.Error() {
+			case "wallet not found":
+				status = http.StatusNotFound
+			case "amount must be positive":
+				status = http.StatusBadRequest
+			}
+			respondError(w, status, err.Error())
 			return
 		}
 	case Withdraw:
-		if err := h.s.WithdrawFunds(r.Context(), parsedWalletID, int(req.Amount)); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err := h.s.WithdrawFunds(ctx, parsedWalletID, req.Amount); err != nil {
+			status := http.StatusInternalServerError
+			switch err.Error() {
+			case "wallet not found":
+				status = http.StatusNotFound
+			case "amount must be positive":
+				status = http.StatusBadRequest
+			case "not enough balance":
+				status = http.StatusBadRequest
+			}
+			respondError(w, status, err.Error())
 			return
 		}
 	default:
-		http.Error(w, "invalid operationType parameter", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid operationType parameter")
 		return
 	}
 
@@ -57,20 +80,24 @@ func (h *RestHandler) TransferFunds(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RestHandler) CreateWallet(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	defer cancel()
+
 	var req CreateWalletRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
 
 	parsedWalletID, err := uuid.Parse(req.WalletID)
 	if err != nil || parsedWalletID == uuid.Nil {
-		http.Error(w, "invalid walletId parameter", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid walletId parameter")
 		return
 	}
 
-	if err := h.s.CreateWallet(r.Context(), parsedWalletID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := h.s.CreateWallet(ctx, parsedWalletID); err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -78,16 +105,20 @@ func (h *RestHandler) CreateWallet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RestHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	defer cancel()
+
 	walletIdStr := chi.URLParam(r, "walletId")
 	walletId, err := uuid.Parse(walletIdStr)
 	if err != nil || walletId == uuid.Nil {
-		http.Error(w, "invalid walletId parameter", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid walletId parameter")
 		return
 	}
 
-	balance, err := h.s.GetBalance(r.Context(), walletId)
+	balance, err := h.s.GetBalance(ctx, walletId)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 

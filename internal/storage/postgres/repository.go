@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
@@ -47,14 +48,14 @@ func (r *PgRepository) DeleteWallet(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *PgRepository) GetById(ctx context.Context, walletId uuid.UUID) (int, error) {
+func (r *PgRepository) GetById(ctx context.Context, walletId uuid.UUID) (int64, error) {
 
 	tx := r.txManager.GetQueryEngine(ctx)
 
 	query := "SELECT balance FROM wallets WHERE wallet_id = $1"
 	row := tx.QueryRow(ctx, query, walletId)
 
-	var balance int
+	var balance int64
 	if err := row.Scan(&balance); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, errors.New("wallet not found")
@@ -66,21 +67,20 @@ func (r *PgRepository) GetById(ctx context.Context, walletId uuid.UUID) (int, er
 
 func (r *PgRepository) LockBalance(ctx context.Context, walletId uuid.UUID) error {
 	tx := r.txManager.GetQueryEngine(ctx)
-
-	query := "SELECT balance FROM wallets WHERE wallet_id = $1 FOR UPDATE;"
-
-	_, err := tx.Exec(ctx, query, walletId)
-	if err != nil {
+	query := "SELECT balance FROM wallets WHERE wallet_id = $1 FOR UPDATE"
+	var balance int64
+	if err := tx.QueryRow(ctx, query, walletId).Scan(&balance); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New("wallet not found")
+		}
 		return err
 	}
 	return nil
 }
 
-func (r *PgRepository) UpdateBalance(ctx context.Context, walletId uuid.UUID, balanceDiff int) error {
+func (r *PgRepository) UpdateBalance(ctx context.Context, walletId uuid.UUID, balanceDiff int64) error {
 	tx := r.txManager.GetQueryEngine(ctx)
-
-	query := "UPDATE wallets SET balance = balance + $2 WHERE wallet_id = $1;"
-
+	query := "UPDATE wallets SET balance = balance + $2 WHERE wallet_id = $1"
 	tag, err := tx.Exec(ctx, query, walletId, balanceDiff)
 	if err != nil {
 		return err
