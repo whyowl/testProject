@@ -3,8 +3,9 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/google/uuid"
 	"project/internal/storage"
+
+	"github.com/google/uuid"
 )
 
 type WalletService struct {
@@ -17,7 +18,7 @@ func NewWalletService(repo storage.Facade) *WalletService {
 	}
 }
 
-func (ws *WalletService) DepositFunds(ctx context.Context, walletId uuid.UUID, amount int) error {
+func (ws *WalletService) DepositFunds(ctx context.Context, walletId uuid.UUID, amount int64) error {
 
 	if amount <= 0 {
 		return errors.New("amount must be positive")
@@ -30,7 +31,7 @@ func (ws *WalletService) DepositFunds(ctx context.Context, walletId uuid.UUID, a
 	return nil
 }
 
-func (ws *WalletService) WithdrawFunds(ctx context.Context, walletId uuid.UUID, amount int) error {
+func (ws *WalletService) WithdrawFunds(ctx context.Context, walletId uuid.UUID, amount int64) error {
 
 	if amount <= 0 {
 		return errors.New("amount must be positive")
@@ -43,7 +44,7 @@ func (ws *WalletService) WithdrawFunds(ctx context.Context, walletId uuid.UUID, 
 	return nil
 }
 
-func (ws *WalletService) GetBalance(ctx context.Context, walletId uuid.UUID) (int, error) {
+func (ws *WalletService) GetBalance(ctx context.Context, walletId uuid.UUID) (int64, error) {
 	return ws.Repo.GetByID(ctx, walletId)
 }
 

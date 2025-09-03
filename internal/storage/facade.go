@@ -3,14 +3,15 @@ package storage
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"project/internal/storage/postgres"
+
+	"github.com/google/uuid"
 )
 
 type Facade interface {
-	Deposit(ctx context.Context, walletId uuid.UUID, amount int) error
-	Withdraw(ctx context.Context, walletId uuid.UUID, amount int) error
-	GetByID(ctx context.Context, walletId uuid.UUID) (int, error)
+	Deposit(ctx context.Context, walletId uuid.UUID, amount int64) error
+	Withdraw(ctx context.Context, walletId uuid.UUID, amount int64) error
+	GetByID(ctx context.Context, walletId uuid.UUID) (int64, error)
 	Create(ctx context.Context, walletId uuid.UUID) error
 }
 
@@ -26,7 +27,7 @@ func NewStorageFacade(txManager postgres.TransactionManager, pgRepository *postg
 	}
 }
 
-func (f *StorageFacade) Deposit(ctx context.Context, walletId uuid.UUID, amount int) error {
+func (f *StorageFacade) Deposit(ctx context.Context, walletId uuid.UUID, amount int64) error {
 	return f.txManager.RunSerializable(ctx, func(ctxTx context.Context) error {
 
 		if err := f.pgRepository.LockBalance(ctxTx, walletId); err != nil {
@@ -41,7 +42,7 @@ func (f *StorageFacade) Deposit(ctx context.Context, walletId uuid.UUID, amount 
 	})
 }
 
-func (f *StorageFacade) Withdraw(ctx context.Context, walletId uuid.UUID, amount int) error {
+func (f *StorageFacade) Withdraw(ctx context.Context, walletId uuid.UUID, amount int64) error {
 	return f.txManager.RunSerializable(ctx, func(ctxTx context.Context) error {
 
 		if err := f.pgRepository.LockBalance(ctxTx, walletId); err != nil {
@@ -65,7 +66,7 @@ func (f *StorageFacade) Withdraw(ctx context.Context, walletId uuid.UUID, amount
 	})
 }
 
-func (f *StorageFacade) GetByID(ctx context.Context, walletId uuid.UUID) (int, error) {
+func (f *StorageFacade) GetByID(ctx context.Context, walletId uuid.UUID) (int64, error) {
 	return f.pgRepository.GetById(ctx, walletId)
 }
 
