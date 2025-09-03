@@ -11,6 +11,7 @@ type Facade interface {
 	Deposit(ctx context.Context, walletId uuid.UUID, amount int) error
 	Withdraw(ctx context.Context, walletId uuid.UUID, amount int) error
 	GetByID(ctx context.Context, walletId uuid.UUID) (int, error)
+	Create(ctx context.Context, walletId uuid.UUID) error
 }
 
 type StorageFacade struct {
@@ -66,4 +67,8 @@ func (f *StorageFacade) Withdraw(ctx context.Context, walletId uuid.UUID, amount
 
 func (f *StorageFacade) GetByID(ctx context.Context, walletId uuid.UUID) (int, error) {
 	return f.pgRepository.GetById(ctx, walletId)
+}
+
+func (f *StorageFacade) Create(ctx context.Context, walletId uuid.UUID) error {
+	return f.pgRepository.InsertWallet(ctx, walletId)
 }
