@@ -34,4 +34,5 @@ migrate-create:
 
 test: ## Run tests
 	@echo "Running tests..."
-	@go test -v ./...
+	@go test ./... -coverprofile=cover.out
+	@go tool cover -func=cover.out

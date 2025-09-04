@@ -17,10 +17,10 @@ type Facade interface {
 
 type StorageFacade struct {
 	txManager    postgres.TransactionManager
-	pgRepository *postgres.PgRepository
+	pgRepository WalletRepo
 }
 
-func NewStorageFacade(txManager postgres.TransactionManager, pgRepository *postgres.PgRepository) Facade {
+func NewStorageFacade(txManager postgres.TransactionManager, pgRepository WalletRepo) Facade {
 	return &StorageFacade{
 		txManager:    txManager,
 		pgRepository: pgRepository,
