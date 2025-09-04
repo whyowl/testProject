@@ -29,7 +29,7 @@ type CreateWalletRequest struct {
 
 func (h *RestHandler) TransferFunds(w http.ResponseWriter, r *http.Request) {
 
-	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
 	var req WalletRequest
@@ -97,7 +97,11 @@ func (h *RestHandler) CreateWallet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.s.CreateWallet(ctx, parsedWalletID); err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		status := http.StatusInternalServerError
+		if err.Error() == "wallet already exists" {
+			status = http.StatusConflict
+		}
+		respondError(w, status, err.Error())
 		return
 	}
 
