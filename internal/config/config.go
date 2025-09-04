@@ -20,7 +20,7 @@ func Load() *Config {
 
 	AppConfig = Config{
 		PostgresURL: getEnv("POSTGRES_URL", "postgres://user:password@localhost:5432/projectdb?sslmode=disable"),
-		ApiAddress:  getEnv("API_ADDRESS", ":80"),
+		ApiAddress:  getEnv("API_ADDRESS", ":8080"),
 	}
 
 	log.Println("Config loaded")
