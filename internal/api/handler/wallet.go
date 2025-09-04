@@ -118,7 +118,11 @@ func (h *RestHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	balance, err := h.s.GetBalance(ctx, walletId)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		status := http.StatusInternalServerError
+		if err.Error() == "wallet not found" {
+			status = http.StatusNotFound
+		}
+		respondError(w, status, err.Error())
 		return
 	}
 
