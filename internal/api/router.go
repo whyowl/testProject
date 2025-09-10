@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 type Router struct {
 	r *chi.Mux
+	s *http.Server
 }
 
 func SetupRouter(s *service.WalletService) *Router {
@@ -35,5 +37,19 @@ func SetupRouter(s *service.WalletService) *Router {
 }
 
 func (router *Router) Run(addr string) error {
-	return http.ListenAndServe(addr, router.r)
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: router.r,
+	}
+	router.s = srv
+
+	return router.s.ListenAndServe()
+}
+
+func (router *Router) Stop(ctx context.Context) error { //TODO CHECK
+	err := router.s.Shutdown(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -48,7 +48,12 @@ func main() {
 
 	<-ctx.Done()
 	log.Println("Shutting down server...")
-	time.Sleep(5 * time.Second)
+	ctxSvr, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := router.Stop(ctxSvr); err != nil {
+		log.Printf("Failed to stop server:", err)
+	}
+	time.Sleep(7 * time.Second)
 }
 
 func InitStorage(pool *pgxpool.Pool) storage.Facade {
